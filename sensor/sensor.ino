@@ -9,7 +9,7 @@
             ** CLK - pin 13
             ** CS (== SS) - pin 10
 
-        * Sensor attached to pin specified by sensor_pin.
+        * Sensor attached to pin specified by sensor_pin (A5 == PC5 == pin 28 on ATmega layout)
 
     Usage:
     =======
@@ -30,7 +30,8 @@
 // If set to true, debug is possible on Serial
 const bool debug = true;
 // Note: this is Arduino's numbering, not Atmel datasheet's
-const int sensor_pin = 13;
+const int sensor_pin = A5;
+int old_val = HIGH;
 
 void log(String log) {
     Serial.println(log);
@@ -61,7 +62,7 @@ void loop() {
 
     // Read the sensor value
     int val = digitalRead(sensor_pin);
-    if (val == LOW) {
+    if (val == LOW && old_val == HIGH) {
         log("[INFO] IR beam sensor was triggered.");
         dataString = String((int) (millis() / 1000));
 
@@ -77,6 +78,7 @@ void loop() {
             log("[ERROR] Error opening data.csv file.");
         }
     }
+    old_val = val;
 
     delay(200);  // Wait for 200ms before doing a new measurement
     /* TODO:
