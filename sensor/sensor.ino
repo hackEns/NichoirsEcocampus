@@ -64,18 +64,18 @@ void loop() {
     if (val == LOW) {
         log("[INFO] IR beam sensor was triggered.");
         dataString = String((int) (millis() / 1000));
-    }
 
-    File dataFile = SD.open("data.csv", FILE_WRITE);
+        File dataFile = SD.open("data.csv", FILE_WRITE);
 
-    if (dataFile) {
-        dataFile.println(dataString);
-        dataFile.close();
+        if (dataFile) {
+            dataFile.println(dataString);
+            dataFile.close();
 
-        log("[INFO] Wrote data to data.csv: " + dataString);
-    }
-    else {
-        log("[ERROR] Error opening data.csv file.");
+            log("[INFO] Wrote data to data.csv: " + dataString);
+        }
+        else {
+            log("[ERROR] Error opening data.csv file.");
+        }
     }
 
     delay(200);  // Wait for 200ms before doing a new measurement
