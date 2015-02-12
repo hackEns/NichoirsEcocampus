@@ -26,16 +26,44 @@
 
 #include <SPI.h>
 #include <SD.h>
+#include <avr/sleep.h>
+#include <avr/power.h>
 
 // If set to true, debug is possible on Serial
 const bool debug = true;
 // Note: this is Arduino's numbering, not Atmel datasheet's
 const int sensor_pin = A5;
 int old_val = HIGH;
+char filename[50];
 
 void log(String log) {
     Serial.println(log);
 }
+
+// Sleep functions
+void setup_watchdog(uint8_t prescalar) {
+    prescalar = min(9, prescalar);
+    uint8_t wdtcsr = prescalar & 7;
+    if (prescalar & 8) {
+        wdtcsr |= _BV(WDP3);
+    }
+    MCUSR &= ~_BV(WDRF);
+    WDTCSR = _BV(WDCE) | _BV(WDE);
+    WDTCSR = _BV(WDCE) | wdtcsr | _BV(WDIE);
+}
+
+ISR(WDT_vect) {
+}
+
+void do_sleep(void) {
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
+    sleep_enable();
+    sleep_mode(); // System sleeps here
+    sleep_disable(); // System continues execution here when watchdog timed out
+}
+
+typedef enum { wdt_16ms = 0, wdt_32ms, wdt_64ms, wdt_128ms, wdt_250ms, wdt_500ms, wdt_1s, wdt_2s, wdt_4s, wdt_8s } wdt_prescalar_e;
+
 
 void setup() {
     if (debug) {
@@ -50,11 +78,19 @@ void setup() {
     pinMode(sensor_pin, INPUT_PULLUP);
     log("[INFO] Sensor pin set as input with pull-up resistor.");
 
+    setup_watchdog(wtd_8s);
+    log("[INFO] Set up sleep mode to 8s.");
+
     if (!SD.begin()) {
         log("[ERROR] Unable to initialize the SD card.");
         return;
     }
     log("[INFO] SD card ready to be used.");
+    
+    int i = 0;
+    for (i = 0; SD.exists(filename); ++i) {
+        sprintf(filename, "data%d.csv", i);
+    }
 }
 
 void loop() {
@@ -66,23 +102,27 @@ void loop() {
         log("[INFO] IR beam sensor was triggered.");
         dataString = String((int) (millis() / 1000));
 
-        File dataFile = SD.open("data.csv", FILE_WRITE);
+        File dataFile = SD.open(filename, FILE_WRITE);
 
         if (dataFile) {
             dataFile.println(dataString);
             dataFile.close();
 
-            log("[INFO] Wrote data to data.csv: " + dataString);
+            String to_log = "[INFO] Wrote data to ";
+            to_log += filename;
+            to_log += dataString;
+            log(to_log);
         }
         else {
-            log("[ERROR] Error opening data.csv file.");
+            String to_log = "[ERROR] Error opening ";
+            to_log += filename;
+            to_log += " file.";
+            log(to_log);
         }
     }
     old_val = val;
 
-    delay(200);  // Wait for 200ms before doing a new measurement
-    /* TODO:
-        * Are 200ms ok ?
-        * Use the watchdog to sleep during the 200ms and reduce power consumption.
-    */
+    //delay(100);  // 100 ms for the MCU to settle
+    do_sleep();
+    //delay(100);  // 100 ms for the MCU to settle
 }
