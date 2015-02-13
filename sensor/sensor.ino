@@ -78,15 +78,15 @@ void setup() {
     pinMode(sensor_pin, INPUT_PULLUP);
     log("[INFO] Sensor pin set as input with pull-up resistor.");
 
-    setup_watchdog(wtd_8s);
-    log("[INFO] Set up sleep mode to 8s.");
+    //setup_watchdog(wtd_250ms);
+    //log("[INFO] Set up sleep mode to 250ms.");
 
     if (!SD.begin()) {
         log("[ERROR] Unable to initialize the SD card.");
         return;
     }
     log("[INFO] SD card ready to be used.");
-    
+
     int i = 0;
     for (i = 0; SD.exists(filename); ++i) {
         sprintf(filename, "data%d.csv", i);
@@ -123,6 +123,8 @@ void loop() {
     old_val = val;
 
     //delay(100);  // 100 ms for the MCU to settle
-    do_sleep();
+    //do_sleep();
     //delay(100);  // 100 ms for the MCU to settle
+
+    delay(200);
 }
