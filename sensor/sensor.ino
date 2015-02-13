@@ -125,8 +125,10 @@ void loop() {
     old_val = val;
     digitalWrite(8, val);
 
-    delay(300);  // 100 ms for the MCU to settle
-    //do_sleep();
-    //delay(100);  // 100 ms for the MCU to settle
+    delay(300);
+
+    // delay(100);  // 100 ms for the MCU to settle
+    // do_sleep();
+    // delay(100);  // 100 ms for the MCU to settle
 
 }
