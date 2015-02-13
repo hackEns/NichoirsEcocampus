@@ -32,7 +32,7 @@
 // If set to true, debug is possible on Serial
 const bool debug = true;
 // Note: this is Arduino's numbering, not Atmel datasheet's
-const int sensor_pin = A5;
+const int sensor_pin = A4;
 int old_val = HIGH;
 char filename[50];
 
@@ -72,22 +72,24 @@ void setup() {
     log("[INFO] Initializing SD card…");
 
     // Make sure that the default chip select pin is set to output
+    pinMode(8, OUTPUT);
     pinMode(10, OUTPUT);
     log("[INFO] CS pin set as output.");
 
     pinMode(sensor_pin, INPUT_PULLUP);
     log("[INFO] Sensor pin set as input with pull-up resistor.");
 
-    setup_watchdog(wtd_8s);
+ //   setup_watchdog(wdt_250ms);
     log("[INFO] Set up sleep mode to 8s.");
 
-    if (!SD.begin()) {
-        log("[ERROR] Unable to initialize the SD card.");
+    if (!SD.begin(10)) {
+        log("[ERROR] Unable to initialize the SD card (ptet que t'as oublié de mettre la carte sd ?).");
         return;
     }
     log("[INFO] SD card ready to be used.");
     
     int i = 0;
+    sprintf(filename, "data%d.csv", 0);
     for (i = 0; SD.exists(filename); ++i) {
         sprintf(filename, "data%d.csv", i);
     }
@@ -121,8 +123,9 @@ void loop() {
         }
     }
     old_val = val;
+    digitalWrite(8, val);
 
-    //delay(100);  // 100 ms for the MCU to settle
-    do_sleep();
+    delay(300);  // 100 ms for the MCU to settle
+    //do_sleep();
     //delay(100);  // 100 ms for the MCU to settle
 }
