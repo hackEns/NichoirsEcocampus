@@ -73,21 +73,22 @@ void setup() {
 
     // Make sure that the default chip select pin is set to output
     pinMode(8, OUTPUT);
+    pinMode(7, OUTPUT);
     pinMode(10, OUTPUT);
     log("[INFO] CS pin set as output.");
 
     pinMode(sensor_pin, INPUT_PULLUP);
     log("[INFO] Sensor pin set as input with pull-up resistor.");
 
-    //setup_watchdog(wtd_250ms);
-    //log("[INFO] Set up sleep mode to 250ms.");
+ //   setup_watchdog(wdt_250ms);
+   // log("[INFO] Set up sleep mode to 8s.");
 
     if (!SD.begin(10)) {
         log("[ERROR] Unable to initialize the SD card (ptet que t'as oublié de mettre la carte sd ?).");
         return;
     }
     log("[INFO] SD card ready to be used.");
-
+    
     int i = 0;
     sprintf(filename, "data%d.csv", 0);
     for (i = 0; SD.exists(filename); ++i) {
@@ -95,8 +96,14 @@ void setup() {
     }
 }
 
+//Pin 8 : status led
+//Pin 7 : ir led
+
 void loop() {
     String dataString = "";
+
+    digitalWrite(7, 1);
+    delay(10);
 
     // Read the sensor value
     int val = digitalRead(sensor_pin);
@@ -112,7 +119,6 @@ void loop() {
 
             String to_log = "[INFO] Wrote data to ";
             to_log += filename;
-            to_log += dataString;
             log(to_log);
         }
         else {
@@ -124,9 +130,9 @@ void loop() {
     }
     old_val = val;
     digitalWrite(8, val);
+    digitalWrite(7, 0);
 
     delay(300);  // 100 ms for the MCU to settle
     //do_sleep();
     //delay(100);  // 100 ms for the MCU to settle
-
 }
