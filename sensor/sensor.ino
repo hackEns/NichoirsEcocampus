@@ -9,11 +9,15 @@
             ** CLK - pin 13
             ** CS (== SS) - pin 10
 
-        * Sensor attached to pin specified by sensor_pin (A5 == PC5 == pin 28 on ATmega layout)
+        * Sensor output plug to pin specified by sensor_pin (A4 == PC4 == pin 27 on ATmega layout)
+        
+        * Sensor power plug to pin specified by sensor_power_pin (7 == PD7 == pin 13 on ATmega layout)
 
     Usage:
     =======
-        It will save timestamps at which the infrared beam was broke in a `data.csv` file on the SD card. The file is plaintext with one timestamp per line. As we do not have hardware clock, the timestamp is the number of seconds elapsed since the last reset of the ATmega.
+        It will save timestamps at which the infrared beam was broke in a `data.csv` file on the SD card.
+        The file is plaintext with one timestamp per line. As we do not have hardware clock, the timestamp
+        is the number of seconds elapsed since the last reset of the ATmega.
 
         Debug is possible through Serial, if `debug` constant is set to `true`.
 
@@ -21,7 +25,7 @@
     Note:
     =====
         This code is in the public domain.
-        Written by Phyks on 12/02/2015.
+        Written by hackEns on 12/02/2015.
 */
 
 #include <SPI.h>
@@ -31,108 +35,75 @@
 
 // If set to true, debug is possible on Serial
 const bool debug = true;
+
 // Note: this is Arduino's numbering, not Atmel datasheet's
-const int sensor_pin = A4;
+const int sensor_pin = A4; // Sensor output
+const int sensor_power_pin = 7; // Sensor power
+const int cs_pin = 10; // SPI CS pin
+
 int old_val = HIGH;
 char filename[50];
 
-void log(String log) {
-    Serial.println(log);
+void log(String msg) {
+  Serial.println(msg);
 }
-
-// Sleep functions
-void setup_watchdog(uint8_t prescalar) {
-    prescalar = min(9, prescalar);
-    uint8_t wdtcsr = prescalar & 7;
-    if (prescalar & 8) {
-        wdtcsr |= _BV(WDP3);
-    }
-    MCUSR &= ~_BV(WDRF);
-    WDTCSR = _BV(WDCE) | _BV(WDE);
-    WDTCSR = _BV(WDCE) | wdtcsr | _BV(WDIE);
-}
-
-ISR(WDT_vect) {
-}
-
-void do_sleep(void) {
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
-    sleep_enable();
-    sleep_mode(); // System sleeps here
-    sleep_disable(); // System continues execution here when watchdog timed out
-}
-
-typedef enum { wdt_16ms = 0, wdt_32ms, wdt_64ms, wdt_128ms, wdt_250ms, wdt_500ms, wdt_1s, wdt_2s, wdt_4s, wdt_8s } wdt_prescalar_e;
-
 
 void setup() {
-    if (debug) {
-        Serial.begin(9600);
-    }
-    log("[INFO] Initializing SD card…");
+  if (debug) {
+      Serial.begin(9600);
+  }
+  log("[INFO] Initializing SD card…");
 
-    // Make sure that the default chip select pin is set to output
-    pinMode(8, OUTPUT);
-    pinMode(7, OUTPUT);
-    pinMode(10, OUTPUT);
-    log("[INFO] CS pin set as output.");
+  pinMode(sensor_power_pin, OUTPUT);
+  log(sprintf("[INFO] Sensor power pin (%d) set as output.", sensor_poser_pin));
+  
+  pinMode(sensor_pin, INPUT_PULLUP);
+  log(sprintf("[INFO] Sensor pin (%d) set as input with pull-up resistor.", sensor_pin));
 
-    pinMode(sensor_pin, INPUT_PULLUP);
-    log("[INFO] Sensor pin set as input with pull-up resistor.");
+  pinMode(cs_pin, OUTPUT);
+  log(sprintf("[INFO] CS pin (%d) set as output.", cs_pin));
 
- //   setup_watchdog(wdt_250ms);
-   // log("[INFO] Set up sleep mode to 8s.");
-
-    if (!SD.begin(10)) {
-        log("[ERROR] Unable to initialize the SD card (ptet que t'as oublié de mettre la carte sd ?).");
-        return;
-    }
-    log("[INFO] SD card ready to be used.");
-    
-    int i = 0;
-    sprintf(filename, "data%d.csv", 0);
-    for (i = 0; SD.exists(filename); ++i) {
-        sprintf(filename, "data%d.csv", i);
-    }
+  if (!SD.begin(cs_pin)) {
+      log("[ERROR] Unable to initialize the SD card (ptet que t'as oublié de mettre la carte sd ?).");
+      return;
+  }
+  log("[INFO] SD card ready to be used.");
+  
+  int i = 0;
+  sprintf(filename, "data%d.csv", 0);
+  for (i = 0; SD.exists(filename); ++i) {
+      sprintf(filename, "data%d.csv", i);
+  }
 }
 
-//Pin 8 : status led
-//Pin 7 : ir led
-
 void loop() {
-    String dataString = "";
+  int timestamp;
 
-    digitalWrite(7, 1);
-    delay(10);
+  digitalWrite(sensor_power_pin, HIGH); // Power the sensor on
+  delay(10); // Let the sensor "boot"
 
-    // Read the sensor value
-    int val = digitalRead(sensor_pin);
-    if (val == LOW && old_val == HIGH) {
-        log("[INFO] IR beam sensor was triggered.");
-        dataString = String((int) (millis() / 1000));
+  int val = digitalRead(sensor_pin); // Read sensor value
+  
+  if (val == LOW && old_val == HIGH) {
+    timestamp = (int) (millis() / 1000));
+    log("[INFO] IR beam sensor was triggered.");
 
-        File dataFile = SD.open(filename, FILE_WRITE);
+    File dataFile = SD.open(filename, FILE_WRITE);
 
-        if (dataFile) {
-            dataFile.println(dataString);
-            dataFile.close();
+    if (dataFile) {
+      dataFile.println(String(timestamp));
+      dataFile.close();
 
-            String to_log = "[INFO] Wrote data to ";
-            to_log += filename;
-            log(to_log);
-        }
-        else {
-            String to_log = "[ERROR] Error opening ";
-            to_log += filename;
-            to_log += " file.";
-            log(to_log);
-        }
+      log(sprintf("[INFO] Wrote data to %s: %d", filename, timestamp));
     }
-    old_val = val;
-    digitalWrite(8, val);
-    digitalWrite(7, 0);
+    else {
+      log("[ERROR] Error opening file " + filename);
+    }
+  }
+  
+  old_val = val;
+  
+  digitalWrite(sensor_power_pin, LOW); // Power the sensor off
 
-    delay(300);  // 100 ms for the MCU to settle
-    //do_sleep();
-    //delay(100);  // 100 ms for the MCU to settle
+  delay(300);  // 100 ms for the MCU to settle
 }
