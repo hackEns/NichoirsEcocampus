@@ -55,20 +55,21 @@ void setup() {
   log("[INFO] Initializing SD card…");
 
   pinMode(sensor_power_pin, OUTPUT);
-  log(sprintf("[INFO] Sensor power pin (%d) set as output.", sensor_poser_pin));
+  log("[INFO] Sensor power pin (" + String(sensor_power_pin) + ") set as output.");
   
   pinMode(sensor_pin, INPUT_PULLUP);
-  log(sprintf("[INFO] Sensor pin (%d) set as input with pull-up resistor.", sensor_pin));
+  log("[INFO] Sensor pin (" + String(sensor_pin) + ") set as input with pull-up resistor.");
 
   pinMode(cs_pin, OUTPUT);
-  log(sprintf("[INFO] CS pin (%d) set as output.", cs_pin));
+  log("[INFO] CS pin (" + String(cs_pin) + ") set as output.");
 
   if (!SD.begin(cs_pin)) {
-      log("[ERROR] Unable to initialize the SD card (ptet que t'as oublié de mettre la carte sd ?).");
+      log("[ERROR] Unable to initialize the SD card (Did you plug the SD card?).");
       return;
   }
   log("[INFO] SD card ready to be used.");
   
+  // Select first available (i.e. non existent) dataXX.csv file
   int i = 0;
   sprintf(filename, "data%d.csv", 0);
   for (i = 0; SD.exists(filename); ++i) {
@@ -85,7 +86,7 @@ void loop() {
   int val = digitalRead(sensor_pin); // Read sensor value
   
   if (val == LOW && old_val == HIGH) {
-    timestamp = (int) (millis() / 1000));
+    timestamp = (int) (millis() / 1000);
     log("[INFO] IR beam sensor was triggered.");
 
     File dataFile = SD.open(filename, FILE_WRITE);
@@ -94,10 +95,10 @@ void loop() {
       dataFile.println(String(timestamp));
       dataFile.close();
 
-      log(sprintf("[INFO] Wrote data to %s: %d", filename, timestamp));
+      log("[INFO] Wrote data to " + String(filename) + ": " + String(timestamp));
     }
     else {
-      log("[ERROR] Error opening file " + filename);
+      log("[ERROR] Error opening file " + String(filename));
     }
   }
   
